@@ -1,0 +1,8 @@
+model Skill {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  deletedAt DateTime?
+
+  technicians TechnicianSkill[]
+  categories  ServiceCategory[]
+}

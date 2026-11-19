@@ -1,0 +1,9 @@
+model TechnicianSkill {
+  technicianId String
+  skillId      String
+
+  technician TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  skill      Skill             @relation(fields: [skillId], references: [id])
+
+  @@id([technicianId, skillId])
+}

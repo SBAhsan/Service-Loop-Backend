@@ -1,0 +1,31 @@
+enum Role {
+  CUSTOMER
+  TECHNICIAN
+  ADMIN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  ASSIGNED
+  SCHEDULED
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  INVOICED
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}

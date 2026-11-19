@@ -1,0 +1,10 @@
+model CustomerProfile {
+  id      String  @id @default(uuid())
+  userId  String  @unique
+  phone   String?
+  address String?
+
+  user     User             @relation(fields: [userId], references: [id])
+  requests ServiceRequest[]
+  feedbacks Feedback[]
+}

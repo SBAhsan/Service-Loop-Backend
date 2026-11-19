@@ -1,0 +1,19 @@
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String?
+  googleId    String?  @unique
+  role        Role     @default(CUSTOMER)
+  isActive    Boolean  @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customerProfile   CustomerProfile?
+  technicianProfile TechnicianProfile?
+  notifications     Notification[]
+  assignmentsMade   Assignment[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+}

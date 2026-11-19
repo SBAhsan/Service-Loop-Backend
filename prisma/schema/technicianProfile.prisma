@@ -1,0 +1,13 @@
+model TechnicianProfile {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  phone       String?
+  bio         String?
+  isAvailable Boolean @default(true)
+
+  user        User              @relation(fields: [userId], references: [id])
+  skills      TechnicianSkill[]
+  assignments Assignment[]
+  reports     ServiceReport[]
+  feedbacks   Feedback[]
+}

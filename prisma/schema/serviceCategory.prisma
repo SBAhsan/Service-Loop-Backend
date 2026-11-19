@@ -1,0 +1,10 @@
+model ServiceCategory {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  description   String?
+  requiredSkillId String?
+  deletedAt     DateTime?
+
+  requiredSkill Skill?           @relation(fields: [requiredSkillId], references: [id])
+  requests      ServiceRequest[]
+}

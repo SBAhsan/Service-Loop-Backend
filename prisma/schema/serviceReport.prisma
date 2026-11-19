@@ -1,0 +1,11 @@
+model ServiceReport {
+  id           String   @id @default(uuid())
+  requestId    String   @unique
+  technicianId String
+  summary      String
+  partsUsed    String?
+  createdAt    DateTime @default(now())
+
+  request    ServiceRequest    @relation(fields: [requestId], references: [id])
+  technician TechnicianProfile @relation(fields: [technicianId], references: [id])
+}

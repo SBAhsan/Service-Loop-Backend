@@ -1,0 +1,28 @@
+model ServiceRequest {
+  id            String        @id @default(uuid())
+  title         String
+  description   String
+  address       String
+  preferredDate DateTime?
+  status        RequestStatus @default(PENDING)
+  rejectReason  String?
+  cancelReason  String?
+  customerId    String
+  categoryId    String
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer    CustomerProfile @relation(fields: [customerId], references: [id])
+  category    ServiceCategory @relation(fields: [categoryId], references: [id])
+  assignments Assignment[]
+  attachments Attachment[]
+  report      ServiceReport?
+  invoice     Invoice?
+  feedback    Feedback?
+
+  @@index([status])
+  @@index([customerId])
+  @@index([categoryId])
+  @@index([createdAt])
+}

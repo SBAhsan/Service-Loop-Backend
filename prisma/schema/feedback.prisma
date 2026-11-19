@@ -1,0 +1,15 @@
+model Feedback {
+  id           String   @id @default(uuid())
+  requestId    String   @unique
+  customerId   String
+  technicianId String
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  request    ServiceRequest    @relation(fields: [requestId], references: [id])
+  customer   CustomerProfile   @relation(fields: [customerId], references: [id])
+  technician TechnicianProfile @relation(fields: [technicianId], references: [id])
+
+  @@index([technicianId])
+}
