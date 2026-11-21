@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "prisma": "^7.10.1",
@@ -32,7 +33,9 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format:check" : "npx biome format ./src",
+    "format:fix" : "npx biome format --write ./src"
   },
   "keywords": [],
   "author": "",

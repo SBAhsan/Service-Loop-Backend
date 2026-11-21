@@ -8,4 +8,20 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Assignment'
+export type * from './models/Attachment'
+export type * from './models/AuditLog'
+export type * from './models/CustomerProfile'
+export type * from './models/Feedback'
+export type * from './models/Invoice'
+export type * from './models/InvoiceItem'
+export type * from './models/Notification'
+export type * from './models/Payment'
+export type * from './models/ServiceCategory'
+export type * from './models/ServiceReport'
+export type * from './models/ServiceRequest'
+export type * from './models/Skill'
+export type * from './models/TechnicianProfile'
+export type * from './models/TechnicianSkill'
+export type * from './models/User'
 export type * from './commonInputTypes'
