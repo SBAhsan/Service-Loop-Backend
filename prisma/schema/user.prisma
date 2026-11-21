@@ -1,14 +1,15 @@
 model User {
-    id        String    @id @default(uuid())
+    id        String     @id @default(uuid())
     name      String
-    email     String    @unique
+    email     String     @unique
     password  String?
-    googleId  String?   @unique
-    role      UserRole  @default(CUSTOMER)
-    isActive  Boolean   @default(true)
+    googleId  String?    @unique
+    role      UserRole   @default(CUSTOMER)
+    status    UserStatus @default(ACTIVE)
+    isActive  Boolean    @default(true)
     deletedAt DateTime?
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
 
     customerProfile   CustomerProfile?
     technicianProfile TechnicianProfile?
