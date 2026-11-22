@@ -13,6 +13,8 @@ router.post('/login', validateRequest(loginUserSchema), authController.loginUser
 
 router.post('/refresh-token', authController.refreshToken);
 
-router.get('/me', auth(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.TECHNICIAN), authController.getMe)
+router.get('/me', auth(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.TECHNICIAN), authController.getMe);
+
+router.post('/google', authController.googleLoginUser)
 
 export const authRoute = router;

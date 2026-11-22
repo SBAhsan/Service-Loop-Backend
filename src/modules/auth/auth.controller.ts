@@ -83,9 +83,24 @@ const getMe = catchAsync(async(req:Request, res: Response, next: NextFunction) =
     });
 })
 
+const googleLoginUser = catchAsync(async(req:Request, res: Response, next: NextFunction) => {
+
+    const payload = req.body;
+
+    const result = await authService.googleLoginUserInDB(payload);
+
+    sendResponse(res, {
+        success: true,
+        statusCode: httpStatus.OK,
+        message: "User logged in successfully",
+        data: result
+    })
+})
+
 export const authController = {
     registerUser,
     loginUser,
     refreshToken,
-    getMe
+    getMe,
+    googleLoginUser
 }

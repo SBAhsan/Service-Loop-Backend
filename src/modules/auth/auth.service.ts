@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma";
-import { ILoginUser, IUserRegisterPayload } from "./auth.interface";
+import {
+  IGoogleLoginPayload,
+  ILoginUser,
+  IUserRegisterPayload,
+} from "./auth.interface";
 import config from "../../config";
 import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
@@ -55,7 +59,10 @@ const loginUserInDB = async (payload: ILoginUser) => {
     },
   });
 
-  const isMatchedPassword = await bcrypt.compare(password, user.password as string);
+  const isMatchedPassword = await bcrypt.compare(
+    password,
+    user.password as string,
+  );
 
   if (!isMatchedPassword) {
     throw new Error(
@@ -84,64 +91,68 @@ const loginUserInDB = async (payload: ILoginUser) => {
 
   return {
     accessToken,
-    refreshToken
-  }
+    refreshToken,
+  };
 };
 
 const refreshTokenInDB = async (refreshToken: string) => {
-    const verifiedRefreshToken = jwtUtils.verifyToken(refreshToken, config.jwt_refresh_secret as string);
+  const verifiedRefreshToken = jwtUtils.verifyToken(
+    refreshToken,
+    config.jwt_refresh_secret as string,
+  );
 
-    if(!verifiedRefreshToken.success){
-        throw new Error (verifiedRefreshToken.error)
-    }
+  if (!verifiedRefreshToken.success) {
+    throw new Error(verifiedRefreshToken.error);
+  }
 
-    const {id} = verifiedRefreshToken.data as JwtPayload;
+  const { id } = verifiedRefreshToken.data as JwtPayload;
 
-    const user = await prisma.user.findUniqueOrThrow({
-        where: {
-            id
-        }
-    });
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      id,
+    },
+  });
 
-    if(user.status === 'BANNED'){
-        throw new Error ("This user is banned")
-    }
+  if (user.status === "BANNED") {
+    throw new Error("This user is banned");
+  }
 
-    const jwtPayload = {
-        id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-    }
+  const jwtPayload = {
+    id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
 
-    const accessToken = jwtUtils.createToken(
-        jwtPayload,
-        config.jwt_access_secret as string,
-        config.jwt_access_expires_in as SignOptions
-    );
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.jwt_access_expires_in as SignOptions,
+  );
 
-    return {accessToken};
+  return { accessToken };
 };
 
 const getMeFromDB = async (userId: string) => {
-    const user = await prisma.user.findUniqueOrThrow({
-        where: {
-            id: userId
-        },
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      id: userId,
+    },
 
-        omit: {
-            password: true
-        }
-    });
+    omit: {
+      password: true,
+    },
+  });
 
-    return user;
+  return user;
 };
 
-
+const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {};
 
 export const authService = {
   registerUserInDB,
   loginUserInDB,
   refreshTokenInDB,
-  getMeFromDB
+  getMeFromDB,
+  googleLoginUserInDB,
 };
