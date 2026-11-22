@@ -8,6 +8,10 @@ import {
 import config from "../../config";
 import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
+import { googleClient } from "../../lib/googleAuth";
+import { TokenPayload } from "google-auth-library";
+import { AppError } from "../../utils/appError";
+import { AuthProvider, UserRole } from "../../../prisma/generated/prisma/enums";
 
 const registerUserInDB = async (payload: IUserRegisterPayload) => {
   const { name, email, password, role, status } = payload;
@@ -147,7 +151,87 @@ const getMeFromDB = async (userId: string) => {
   return user;
 };
 
-const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {};
+const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {
+
+    let googleIdTokenPayload : TokenPayload | null | undefined = null;
+
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: payload.idToken
+        })
+
+        googleIdTokenPayload = ticket.getPayload();
+    } catch (error) {
+        console.log("Google ID token verification failed", error);
+
+        throw new AppError(401, "Invalid or expired google ID token", "");
+    }
+
+    if(!googleIdTokenPayload){
+        throw new AppError(401, "Invalid or expired google ID token", "");
+    }
+
+    if(!googleIdTokenPayload.name){
+        throw new AppError (404, "Google email ID user name not found", "");
+    }
+
+    if(!googleIdTokenPayload.email){
+        throw new AppError (404, "Google email not found", "");
+    }
+
+    const ifCustomerExistsWithGoogleAuth = await prisma.user.findUnique({
+        where: {
+            email: googleIdTokenPayload.email,
+            role: UserRole.CUSTOMER,
+            googleId: googleIdTokenPayload.sub
+        }
+    })
+
+    let user = ifCustomerExistsWithGoogleAuth;
+
+    if(!user){
+        user = await prisma.user.create({
+            data: {
+                name: googleIdTokenPayload.name,
+                email: googleIdTokenPayload.email,
+                role: UserRole.CUSTOMER,
+                googleId: googleIdTokenPayload.sub,
+                authProvider: AuthProvider.GOOGLE,
+                customerProfile: {
+                    create: {
+                        name: googleIdTokenPayload.name,
+                        email: googleIdTokenPayload.email
+                    }
+                }
+            }
+        })
+    }
+
+    const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret as string,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+
+};
 
 export const authService = {
   registerUserInDB,

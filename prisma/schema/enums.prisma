@@ -9,6 +9,11 @@ enum UserStatus {
   BANNED
 }
 
+enum AuthProvider {
+    GOOGLE
+    CREDENTIAL
+}
+
 enum RequestStatus {
   PENDING
   APPROVED
