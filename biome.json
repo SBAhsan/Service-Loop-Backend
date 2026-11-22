@@ -18,6 +18,9 @@
 			"preset": "recommended",
 			"correctness": {
 				"noUnusedFunctionParameters": "off"
+			},
+			"suspicious": {
+				"noImplicitAnyLet": "warn"
 			}
 		}
 	},
