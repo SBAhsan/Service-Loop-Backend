@@ -152,62 +152,94 @@ const getMeFromDB = async (userId: string) => {
 };
 
 const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {
+  let googleIdTokenPayload: TokenPayload | null | undefined = null;
 
-    let googleIdTokenPayload : TokenPayload | null | undefined = null;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: payload.idToken,
+    });
 
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: payload.idToken
-        })
+    googleIdTokenPayload = ticket.getPayload();
+  } catch (error) {
+    console.log("Google ID token verification failed", error);
 
-        googleIdTokenPayload = ticket.getPayload();
-    } catch (error) {
-        console.log("Google ID token verification failed", error);
+    throw new AppError(401, "Invalid or expired google ID token", "");
+  }
 
-        throw new AppError(401, "Invalid or expired google ID token", "");
+  if (!googleIdTokenPayload) {
+    throw new AppError(401, "Invalid or expired google ID token", "");
+  }
+
+  if (!googleIdTokenPayload.name) {
+    throw new AppError(404, "Google email ID user name not found", "");
+  }
+
+  if (!googleIdTokenPayload.email) {
+    throw new AppError(404, "Google email not found", "");
+  }
+
+  const ifCustomerExistsWithGoogleAuth = await prisma.user.findUnique({
+    where: {
+      email: googleIdTokenPayload.email,
+      role: UserRole.CUSTOMER,
+      googleId: googleIdTokenPayload.sub,
+    },
+  });
+
+  let user = ifCustomerExistsWithGoogleAuth;
+
+  if (!ifCustomerExistsWithGoogleAuth) {
+    const ifCustomerExistsWithCredentials = await prisma.user.findUnique({
+      where: {
+        email: googleIdTokenPayload.email,
+        role: UserRole.CUSTOMER,
+        authProvider: AuthProvider.CREDENTIAL
+      },
+    });
+
+    if(ifCustomerExistsWithCredentials?.status === "BANNED") {
+        throw new AppError (403, "User is banned", "")
     }
 
-    if(!googleIdTokenPayload){
-        throw new AppError(401, "Invalid or expired google ID token", "");
+    if(ifCustomerExistsWithCredentials?.isDeleted || ifCustomerExistsWithCredentials?.status === "DELETED"){
+        throw new AppError (404, "Account has been deleted", "")
     }
 
-    if(!googleIdTokenPayload.name){
-        throw new AppError (404, "Google email ID user name not found", "");
-    }
-
-    if(!googleIdTokenPayload.email){
-        throw new AppError (404, "Google email not found", "");
-    }
-
-    const ifCustomerExistsWithGoogleAuth = await prisma.user.findUnique({
+    if (ifCustomerExistsWithCredentials) {
+      user = await prisma.user.update({
         where: {
-            email: googleIdTokenPayload.email,
-            role: UserRole.CUSTOMER,
-            googleId: googleIdTokenPayload.sub
-        }
-    })
-
-    let user = ifCustomerExistsWithGoogleAuth;
-
-    if(!user){
-        user = await prisma.user.create({
-            data: {
-                name: googleIdTokenPayload.name,
-                email: googleIdTokenPayload.email,
-                role: UserRole.CUSTOMER,
-                googleId: googleIdTokenPayload.sub,
-                authProvider: AuthProvider.GOOGLE,
-                customerProfile: {
-                    create: {
-                        name: googleIdTokenPayload.name,
-                        email: googleIdTokenPayload.email
-                    }
-                }
-            }
-        })
+          email: googleIdTokenPayload.email,
+          role: UserRole.CUSTOMER,
+        },
+        data: {
+          googleId: googleIdTokenPayload.sub,
+          authProvider: AuthProvider.CREDENTIAL
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          name: googleIdTokenPayload.name,
+          email: googleIdTokenPayload.email,
+          role: UserRole.CUSTOMER,
+          googleId: googleIdTokenPayload.sub,
+          authProvider: AuthProvider.GOOGLE,
+          customerProfile: {
+            create: {
+              name: googleIdTokenPayload.name,
+              email: googleIdTokenPayload.email,
+            },
+          },
+        },
+      });
     }
+  }
 
-    const jwtPayload = {
+  if(!user){
+    throw new AppError (404, "User not found", "")
+  }
+
+  const jwtPayload = {
     id: user.id,
     name: user.name,
     email: user.email,
@@ -230,7 +262,6 @@ const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {
     accessToken,
     refreshToken,
   };
-
 };
 
 export const authService = {
