@@ -1,273 +1,297 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma";
-import {
-  IGoogleLoginPayload,
-  ILoginUser,
-  IUserRegisterPayload,
+import type {
+	IGoogleLoginPayload,
+	ILoginUser,
+	IUserRegisterPayload,
 } from "./auth.interface";
 import config from "../../config";
 import { jwtUtils } from "../../utils/jwt";
-import { JwtPayload, SignOptions } from "jsonwebtoken";
+import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import { googleClient } from "../../lib/googleAuth";
-import { TokenPayload } from "google-auth-library";
+import type { TokenPayload } from "google-auth-library";
 import { AppError } from "../../utils/appError";
 import { AuthProvider, UserRole } from "../../../prisma/generated/prisma/enums";
 
 const registerUserInDB = async (payload: IUserRegisterPayload) => {
-  const { name, email, password, role, status } = payload;
+	const { name, email, password, role, status } = payload;
 
-  const doUserExist = await prisma.user.findUnique({
-    where: {
-      email,
-    },
-  });
+	const doUserExist = await prisma.user.findUnique({
+		where: {
+			email,
+		},
+	});
 
-  if (doUserExist) {
-    throw new Error("User already exist");
-  }
+	if (doUserExist) {
+		throw new Error("User already exist");
+	}
 
-  const hashPassword = await bcrypt.hash(
-    password,
-    Number(config.bcrypt_salt_rounds),
-  );
+	const hashPassword = await bcrypt.hash(
+		password,
+		Number(config.bcrypt_salt_rounds),
+	);
 
-  const createdUser = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashPassword,
-      role,
-      status,
-    },
-  });
+	const createdUser = await prisma.user.create({
+		data: {
+			name,
+			email,
+			password: hashPassword,
+			role,
+			status,
+		},
+	});
 
-  const result = await prisma.user.findUnique({
-    where: {
-      id: createdUser.id,
-      email: createdUser.email,
-    },
-    omit: {
-      password: true,
-    },
-  });
+	const result = await prisma.user.findUnique({
+		where: {
+			id: createdUser.id,
+			email: createdUser.email,
+		},
+		omit: {
+			password: true,
+		},
+	});
 
-  return result;
+	return result;
 };
 
 const loginUserInDB = async (payload: ILoginUser) => {
-  const { email, password } = payload;
+	const { email, password } = payload;
 
-  const user = await prisma.user.findUniqueOrThrow({
-    where: {
-      email,
-    },
-  });
+	const user = await prisma.user.findUniqueOrThrow({
+		where: {
+			email,
+		},
+	});
 
-  const isMatchedPassword = await bcrypt.compare(
-    password,
-    user.password as string,
-  );
+	const isMatchedPassword = await bcrypt.compare(
+		password,
+		user.password as string,
+	);
 
-  if (!isMatchedPassword) {
-    throw new Error(
-      "The password you have provided is wrong. Please provide a valid password",
-    );
-  }
+	if (!isMatchedPassword) {
+		throw new Error(
+			"The password you have provided is wrong. Please provide a valid password",
+		);
+	}
 
-  const jwtPayload = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	if (user.password === null && user.googleId !== null) {
+		throw new AppError(
+			422,
+			"This user is already registered with google. Please try to login with google",
+			"",
+		);
+	}
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret as string,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	const jwtPayload = {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret as string,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret as string,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  return {
-    accessToken,
-    refreshToken,
-  };
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret as string,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
+
+	return {
+		accessToken,
+		refreshToken,
+	};
 };
 
 const refreshTokenInDB = async (refreshToken: string) => {
-  const verifiedRefreshToken = jwtUtils.verifyToken(
-    refreshToken,
-    config.jwt_refresh_secret as string,
-  );
+	const verifiedRefreshToken = jwtUtils.verifyToken(
+		refreshToken,
+		config.jwt_refresh_secret as string,
+	);
 
-  if (!verifiedRefreshToken.success) {
-    throw new Error(verifiedRefreshToken.error);
-  }
+	if (!verifiedRefreshToken.success) {
+		throw new Error(verifiedRefreshToken.error);
+	}
 
-  const { id } = verifiedRefreshToken.data as JwtPayload;
+	const { id } = verifiedRefreshToken.data as JwtPayload;
 
-  const user = await prisma.user.findUniqueOrThrow({
-    where: {
-      id,
-    },
-  });
+	const user = await prisma.user.findUniqueOrThrow({
+		where: {
+			id,
+		},
+	});
 
-  if (user.status === "BANNED") {
-    throw new Error("This user is banned");
-  }
+	if (user.status === "BANNED") {
+		throw new Error("This user is banned");
+	}
 
-  const jwtPayload = {
-    id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	const jwtPayload = {
+		id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret as string,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret as string,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  return { accessToken };
+	return { accessToken };
 };
 
 const getMeFromDB = async (userId: string) => {
-  const user = await prisma.user.findUniqueOrThrow({
-    where: {
-      id: userId,
-    },
+	const user = await prisma.user.findUniqueOrThrow({
+		where: {
+			id: userId,
+		},
 
-    omit: {
-      password: true,
-    },
-  });
+		omit: {
+			password: true,
+		},
+	});
 
-  return user;
+	return user;
 };
 
 const googleLoginUserInDB = async (payload: IGoogleLoginPayload) => {
-  let googleIdTokenPayload: TokenPayload | null | undefined = null;
+	let googleIdTokenPayload: TokenPayload | null | undefined = null;
 
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: payload.idToken,
-    });
+	try {
+		const ticket = await googleClient.verifyIdToken({
+			idToken: payload.idToken,
+		});
 
-    googleIdTokenPayload = ticket.getPayload();
-  } catch (error) {
-    console.log("Google ID token verification failed", error);
+		googleIdTokenPayload = ticket.getPayload();
+	} catch (error) {
+		console.log("Google ID token verification failed", error);
 
-    throw new AppError(401, "Invalid or expired google ID token", "");
-  }
+		throw new AppError(401, "Invalid or expired google ID token", "");
+	}
 
-  if (!googleIdTokenPayload) {
-    throw new AppError(401, "Invalid or expired google ID token", "");
-  }
+	if (!googleIdTokenPayload) {
+		throw new AppError(401, "Invalid or expired google ID token", "");
+	}
 
-  if (!googleIdTokenPayload.name) {
-    throw new AppError(404, "Google email ID user name not found", "");
-  }
+	if (!googleIdTokenPayload.name) {
+		throw new AppError(404, "Google email ID user name not found", "");
+	}
 
-  if (!googleIdTokenPayload.email) {
-    throw new AppError(404, "Google email not found", "");
-  }
+	if (!googleIdTokenPayload.email) {
+		throw new AppError(404, "Google email not found", "");
+	}
 
-  const ifCustomerExistsWithGoogleAuth = await prisma.user.findUnique({
-    where: {
-      email: googleIdTokenPayload.email,
-      role: UserRole.CUSTOMER,
-      googleId: googleIdTokenPayload.sub,
-    },
-  });
+	const ifCustomerExistsWithGoogleAuth = await prisma.user.findUnique({
+		where: {
+			email: googleIdTokenPayload.email,
+			role: UserRole.CUSTOMER,
+			googleId: googleIdTokenPayload.sub,
+		},
+	});
 
-  let user = ifCustomerExistsWithGoogleAuth;
+	let user = ifCustomerExistsWithGoogleAuth;
 
-  if (!ifCustomerExistsWithGoogleAuth) {
-    const ifCustomerExistsWithCredentials = await prisma.user.findUnique({
-      where: {
-        email: googleIdTokenPayload.email,
-        role: UserRole.CUSTOMER,
-        authProvider: AuthProvider.CREDENTIAL
-      },
-    });
+	if (!ifCustomerExistsWithGoogleAuth) {
+		const ifCustomerExistsWithCredentials = await prisma.user.findUnique({
+			where: {
+				email: googleIdTokenPayload.email,
+				role: UserRole.CUSTOMER,
+				authProvider: AuthProvider.CREDENTIAL,
+			},
+		});
 
-    if(ifCustomerExistsWithCredentials?.status === "BANNED") {
-        throw new AppError (403, "User is banned", "")
-    }
+		if (!ifCustomerExistsWithCredentials?.emailVerified) {
+			throw new AppError(403, "Email is nor verified", "");
+		}
 
-    if(ifCustomerExistsWithCredentials?.isDeleted || ifCustomerExistsWithCredentials?.status === "DELETED"){
-        throw new AppError (404, "Account has been deleted", "")
-    }
+		if (ifCustomerExistsWithCredentials?.status === "BANNED") {
+			throw new AppError(403, "User is banned", "");
+		}
 
-    if (ifCustomerExistsWithCredentials) {
-      user = await prisma.user.update({
-        where: {
-          email: googleIdTokenPayload.email,
-          role: UserRole.CUSTOMER,
-        },
-        data: {
-          googleId: googleIdTokenPayload.sub,
-          authProvider: AuthProvider.CREDENTIAL
-        },
-      });
-    } else {
-      user = await prisma.user.create({
-        data: {
-          name: googleIdTokenPayload.name,
-          email: googleIdTokenPayload.email,
-          role: UserRole.CUSTOMER,
-          googleId: googleIdTokenPayload.sub,
-          authProvider: AuthProvider.GOOGLE,
-          customerProfile: {
-            create: {
-              name: googleIdTokenPayload.name,
-              email: googleIdTokenPayload.email,
-            },
-          },
-        },
-      });
-    }
-  }
+		if (
+			ifCustomerExistsWithCredentials?.isDeleted ||
+			ifCustomerExistsWithCredentials?.status === "DELETED"
+		) {
+			throw new AppError(404, "Account has been deleted", "");
+		}
 
-  if(!user){
-    throw new AppError (404, "User not found", "")
-  }
+		if (ifCustomerExistsWithCredentials) {
+			user = await prisma.user.update({
+				where: {
+					email: googleIdTokenPayload.email,
+					role: UserRole.CUSTOMER,
+				},
+				data: {
+					googleId: googleIdTokenPayload.sub,
+					authProvider: AuthProvider.CREDENTIAL,
+				},
+			});
+		} else {
+			user = await prisma.user.create({
+				data: {
+					name: googleIdTokenPayload.name,
+					email: googleIdTokenPayload.email,
+					role: UserRole.CUSTOMER,
+					googleId: googleIdTokenPayload.sub,
+					authProvider: AuthProvider.GOOGLE,
+					emailVerified: true,
+					customerProfile: {
+						create: {
+							name: googleIdTokenPayload.name,
+							email: googleIdTokenPayload.email,
+						},
+					},
+				},
+			});
+		}
+	}
 
-  const jwtPayload = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	if (!user) {
+		throw new AppError(404, "User not found", "");
+	}
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret as string,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	if (user.status === "BANNED") {
+		throw new AppError(403, "User is banned", "");
+	}
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret as string,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
+	if (user.isDeleted || user.status === "DELETED") {
+		throw new AppError(404, "User has been deleted", "");
+	}
 
-  return {
-    accessToken,
-    refreshToken,
-  };
+	const jwtPayload = {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
+
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret as string,
+		config.jwt_access_expires_in as SignOptions,
+	);
+
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret as string,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
+
+	return {
+		accessToken,
+		refreshToken,
+	};
 };
 
 export const authService = {
-  registerUserInDB,
-  loginUserInDB,
-  refreshTokenInDB,
-  getMeFromDB,
-  googleLoginUserInDB,
+	registerUserInDB,
+	loginUserInDB,
+	refreshTokenInDB,
+	getMeFromDB,
+	googleLoginUserInDB,
 };
