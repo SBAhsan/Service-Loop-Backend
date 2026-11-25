@@ -15,10 +15,10 @@ app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(
-  cors({
-    origin: config.cors_origin?.split(",") ?? false,
-    credentials: true,
-  }),
+	cors({
+		origin: config.cors_origin?.split(",") ?? false,
+		credentials: true,
+	}),
 );
 app.use(generalLimiter);
 

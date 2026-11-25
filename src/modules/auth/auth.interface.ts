@@ -1,4 +1,7 @@
-import type { UserRole, UserStatus } from "../../../prisma/generated/prisma/enums";
+import type {
+	UserRole,
+	UserStatus,
+} from "../../../prisma/generated/prisma/enums";
 
 export interface IUserRegisterPayload {
 	name: string;

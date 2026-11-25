@@ -1,6 +1,6 @@
 export interface IUpdateProfilePayload {
-  name?: string;
-  phone?: string;
-  address?: string;
-  bio?: string;
+	name?: string;
+	phone?: string;
+	address?: string;
+	bio?: string;
 }
