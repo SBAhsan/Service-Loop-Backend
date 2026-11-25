@@ -8,6 +8,7 @@ import helmet from "helmet";
 import cors from "cors";
 import config from "./config";
 import { authLimiter, generalLimiter } from "./middlewares/rateLimiter";
+import { userRoute } from "./modules/users/users.route";
 
 const app: Application = express();
 
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/auth", authLimiter, authRoute);
+app.use("/api/v1/users", userRoute)
 
 app.use(notFound);
 app.use(globalErrorHandler);

@@ -18,4 +18,4 @@ router.patch(
 	userController.updateMyProfile,
 );
 
-export const authRoute = router;
+export const userRoute = router;
