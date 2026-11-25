@@ -4,8 +4,23 @@ import { authRoute } from "./modules/auth/auth.route";
 import cookieParser from "cookie-parser";
 import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import { notFound } from "./middlewares/notFound";
+import helmet from "helmet";
+import cors from "cors";
+import config from "./config";
+import { authLimiter, generalLimiter } from "./middlewares/rateLimiter";
 
 const app: Application = express();
+
+app.set("trust proxy", 1);
+
+app.use(helmet());
+app.use(
+  cors({
+    origin: config.cors_origin?.split(",") ?? false,
+    credentials: true,
+  }),
+);
+app.use(generalLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -15,7 +30,7 @@ app.get("/", (req, res) => {
 	res.send("Hello World!");
 });
 
-app.use("/api/v1/auth", authRoute);
+app.use("/api/v1/auth", authLimiter, authRoute);
 
 app.use(notFound);
 app.use(globalErrorHandler);
