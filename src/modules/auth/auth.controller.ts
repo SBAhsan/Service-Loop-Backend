@@ -3,6 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { authService } from "./auth.service";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status";
+import { cookieOptions } from "../../utils/cookieOptions";
 
 const registerUser = catchAsync(
 	async (req: Request, res: Response, next: NextFunction) => {
@@ -27,16 +28,12 @@ const loginUser = catchAsync(
 			await authService.loginUserInDB(payload);
 
 		res.cookie("accessToken", accessToken, {
-			httpOnly: true,
-			secure: false,
-			sameSite: "none",
+			...cookieOptions,
 			maxAge: 1000 * 60 * 60 * 24,
 		});
 
 		res.cookie("refreshToken", refreshToken, {
-			httpOnly: true,
-			secure: false,
-			sameSite: "none",
+			...cookieOptions,
 			maxAge: 1000 * 60 * 60 * 24 * 7,
 		});
 
@@ -61,9 +58,7 @@ const refreshToken = catchAsync(
 		);
 
 		res.cookie("accessToken", accessToken, {
-			httpOnly: true,
-			secure: false,
-			sameSite: "none",
+			...cookieOptions,
 			maxAge: 1000 * 60 * 60 * 24,
 		});
 
@@ -101,16 +96,12 @@ const googleLoginUser = catchAsync(
 			await authService.googleLoginUserInDB(payload);
 
 		res.cookie("accessToken", accessToken, {
-			httpOnly: true,
-			secure: false,
-			sameSite: "none",
+			...cookieOptions,
 			maxAge: 1000 * 60 * 60 * 24,
 		});
 
 		res.cookie("refreshToken", refreshToken, {
-			httpOnly: true,
-			secure: false,
-			sameSite: "none",
+			...cookieOptions,
 			maxAge: 1000 * 60 * 60 * 24 * 7,
 		});
 
@@ -126,10 +117,23 @@ const googleLoginUser = catchAsync(
 	},
 );
 
+const logoutUser = catchAsync(async (req: Request, res: Response) => {
+	res.clearCookie("accessToken", cookieOptions);
+	res.clearCookie("refreshToken", cookieOptions);
+
+	sendResponse(res, {
+		success: true,
+		statusCode: httpStatus.OK,
+		message: "User logged out successfully",
+		data: null,
+	});
+});
+
 export const authController = {
 	registerUser,
 	loginUser,
 	refreshToken,
 	getMe,
 	googleLoginUser,
+    logoutUser
 };
