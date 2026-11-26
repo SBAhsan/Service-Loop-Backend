@@ -57,8 +57,38 @@ const updateSkillInDB = async (id: string, payload: ISkillPayload) => {
   return result;
 };
 
+const deleteSkillInDB = async (id: string) => {
+	const skill = await prisma.skill.findFirst({
+		where: { id, deletedAt: null },
+	});
+
+	if (!skill) {
+		throw new AppError(404, "Skill not found", []);
+	}
+
+	const categoriesUsingSkill = await prisma.serviceCategory.count({
+		where: { requiredSkillId: id, deletedAt: null },
+	});
+
+	if (categoriesUsingSkill > 0) {
+		throw new AppError(
+			409,
+			"This skill is required by an active category. Change the category first",
+			[],
+		);
+	}
+
+	await prisma.skill.update({
+		where: { id },
+		data: { deletedAt: new Date() },
+	});
+
+	return null;
+};
+
 export const skillService = {
   createSkillInDB,
   getAllSkillsFromDB,
-  updateSkillInDB
+  updateSkillInDB,
+  deleteSkillInDB
 };
