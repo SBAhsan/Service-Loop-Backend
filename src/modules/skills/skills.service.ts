@@ -11,6 +11,7 @@ const createSkillInDB = async (payload: ISkillPayload) => {
 		throw new AppError(409, "A skill with this name already exists", []);
 	}
 
+	// biome-ignore lint/complexity/useOptionalChain: <explanation>
 	if (existing && existing.deletedAt) {
 		return prisma.skill.update({
 			where: { id: existing.id },
@@ -27,6 +28,15 @@ const createSkillInDB = async (payload: ISkillPayload) => {
 	return result;
 };
 
+const getAllSkillsFromDB = async () => {
+	return prisma.skill.findMany({
+		where: { deletedAt: null },
+		select: { id: true, name: true },
+		orderBy: { name: "asc" },
+	});
+};
+
 export const skillService = {
-    createSkillInDB
+    createSkillInDB,
+    getAllSkillsFromDB
 }

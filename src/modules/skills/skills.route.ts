@@ -7,6 +7,8 @@ import { UserRole } from "../../../prisma/generated/prisma/enums";
 
 const router = Router();
 
+router.get("/", skillController.getAllSkills);
+
 router.post(
 	"/",
 	auth(UserRole.ADMIN),
