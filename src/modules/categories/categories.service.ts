@@ -93,8 +93,26 @@ const updateCategoryInDB = async (
   return result;
 };
 
+const deleteCategoryInDB = async (id: string) => {
+	const category = await prisma.serviceCategory.findFirst({
+		where: { id, deletedAt: null },
+	});
+
+	if (!category) {
+		throw new AppError(404, "Category not found", []);
+	}
+
+	await prisma.serviceCategory.update({
+		where: { id },
+		data: { deletedAt: new Date() },
+	});
+
+	return null;
+};
+
 export const categoryService = {
   createCategoryInDB,
   getAllCategoriesFromDB,
-  updateCategoryInDB
+  updateCategoryInDB,
+  deleteCategoryInDB
 };

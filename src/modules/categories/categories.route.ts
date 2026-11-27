@@ -2,7 +2,7 @@ import { Router } from "express";
 import { auth } from "../../middlewares/auth";
 import { UserRole } from "../../../prisma/generated/prisma/enums";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { createCategorySchema, updateCategorySchema } from "./categories.validation";
+import { createCategorySchema, deleteCategorySchema, updateCategorySchema } from "./categories.validation";
 import { categoryController } from "./categories.controller";
 
 const router = Router();
@@ -22,5 +22,13 @@ router.patch(
 	validateRequest(updateCategorySchema),
 	categoryController.updateCategory,
 );
+
+router.delete(
+	"/:id",
+	auth(UserRole.ADMIN),
+	validateRequest(deleteCategorySchema),
+	categoryController.deleteCategory,
+);
+
 
 export const categoryRoute = router;
