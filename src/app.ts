@@ -10,6 +10,7 @@ import config from "./config";
 import { authLimiter, generalLimiter } from "./middlewares/rateLimiter";
 import { userRoute } from "./modules/users/users.route";
 import { skillRoute } from "./modules/skills/skills.route";
+import { categoryRoute } from "./modules/categories/categories.route";
 
 const app: Application = express();
 
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", authLimiter, authRoute);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/skills", skillRoute);
+app.use("/api/v1/categories", categoryRoute);
 
 app.use(notFound);
 app.use(globalErrorHandler);
