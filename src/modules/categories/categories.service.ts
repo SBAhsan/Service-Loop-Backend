@@ -80,7 +80,7 @@ const updateCategoryInDB = async (
     throw new AppError(404, "Required skill not found", []);
   }
 
-  return prisma.serviceCategory.update({
+  const result = prisma.serviceCategory.update({
     where: { id },
     data: {
       name: payload.name?.trim(),
@@ -89,6 +89,8 @@ const updateCategoryInDB = async (
     },
     select: categorySelect,
   });
+
+  return result;
 };
 
 export const categoryService = {
