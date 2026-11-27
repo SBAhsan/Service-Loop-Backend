@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
-import { ICreateCategoryPayload } from "./categories.interface";
+import { ICreateCategoryPayload, IUpdateCategoryPayload } from "./categories.interface";
 
 const categorySelect = {
   id: true,
@@ -52,16 +52,47 @@ const createCategoryInDB = async (payload: ICreateCategoryPayload) => {
   return result;
 };
 
-
 const getAllCategoriesFromDB = async () => {
-	return prisma.serviceCategory.findMany({
-		where: { deletedAt: null },
-		select: categorySelect,
-		orderBy: { name: "asc" },
-	});
+  return prisma.serviceCategory.findMany({
+    where: { deletedAt: null },
+    select: categorySelect,
+    orderBy: { name: "asc" },
+  });
+};
+
+const updateCategoryInDB = async (
+  id: string,
+  payload: IUpdateCategoryPayload,
+) => {
+  const category = await prisma.serviceCategory.findFirst({
+    where: { id, deletedAt: null },
+  });
+
+  if (!category) {
+    throw new AppError(404, "Category not found", []);
+  }
+
+  const checkSkillExists = await prisma.skill.findFirst({
+    where: { id, deletedAt: null },
+  });
+
+  if (!checkSkillExists) {
+    throw new AppError(404, "Required skill not found", []);
+  }
+
+  return prisma.serviceCategory.update({
+    where: { id },
+    data: {
+      name: payload.name?.trim(),
+      description: payload.description,
+      requiredSkillId: payload.requiredSkillId,
+    },
+    select: categorySelect,
+  });
 };
 
 export const categoryService = {
-    createCategoryInDB,
-    getAllCategoriesFromDB
-}
+  createCategoryInDB,
+  getAllCategoriesFromDB,
+  updateCategoryInDB
+};
