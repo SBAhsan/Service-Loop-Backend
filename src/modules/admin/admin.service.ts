@@ -1,5 +1,10 @@
+import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { ICreateTechnicianPayload } from "./admin.interface";
+import config from "../../config";
+import { UserRole } from "../../../prisma/generated/prisma/enums";
+import { writeAuditLog } from "../../utils/writeAuditLog";
 
 const setTechnicianSkillsInDB = async (
 	technicianId: string,
@@ -42,6 +47,60 @@ const setTechnicianSkillsInDB = async (
 	});
 };
 
+const createTechnicianInDB = async (
+	payload: ICreateTechnicianPayload,
+	adminId: string,
+) => {
+	const email = payload.email.toLowerCase();
+
+	const existingUser = await prisma.user.findUnique({ where: { email } });
+
+	if (existingUser) {
+		throw new AppError(409, "A user with this email already exists", []);
+	}
+
+	const hashedPassword = await bcrypt.hash(
+		payload.password,
+		Number(config.bcrypt_salt_rounds),
+	);
+
+	const result = await prisma.$transaction(async (tx) => {
+		const user = await tx.user.create({
+			data: {
+				name: payload.name,
+				email,
+				password: hashedPassword,
+				phone: payload.phone,
+				role: UserRole.TECHNICIAN,
+				technicianProfile: {
+					create: { bio: payload.bio },
+				},
+			},
+			omit: { password: true, googleId: true, deletedAt: true },
+			include: {
+				technicianProfile: { select: { id: true, bio: true, isAvailable: true } },
+			},
+		});
+
+		await writeAuditLog(
+			{
+				actorId: adminId,
+				action: "TECHNICIAN_CREATED",
+				entityType: "User",
+				entityId: user.id,
+				after: { name: user.name, email: user.email, role: user.role },
+			},
+			tx,
+		);
+
+		return user;
+	});
+
+	return result;
+};
+
+
 export const adminService = {
 	setTechnicianSkillsInDB,
+    createTechnicianInDB
 };

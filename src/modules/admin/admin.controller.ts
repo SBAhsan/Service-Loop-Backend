@@ -18,6 +18,18 @@ const setTechnicianSkills = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const createTechnician = catchAsync(async (req: Request, res: Response) => {
+	const result = await adminService.createTechnicianInDB(req.body, req.user!.id);
+
+	sendResponse(res, {
+		success: true,
+		statusCode: httpStatus.CREATED,
+		message: "Technician created successfully",
+		data: result,
+	});
+});
+
 export const adminController = {
 	setTechnicianSkills,
+    createTechnician
 };
